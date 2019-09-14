@@ -22,7 +22,7 @@ Since Quarkus has some excellent examples to get you started we will first creat
 6. Login with the OC tool by going to the console, clicking the question mark in the top right again and choosing "Copy login command". You now need to login again and you will be presented with a token you can copy and paste into your terminal to login with OC. 
 7. Try "oc get project" to get your created project. If not, type: "oc project quarkus-<your-name>" to select it.
 8. Now lets go and run the one-liner command to clone your greeting app from your github account and build it into a native application and run it on openshift. Go to the terminal you have used to login to OC and run the following command:
-`oc new-app quay.io/quarkus/ubi-quarkus-native-s2i:19.1.1~<your-git-repo>  --name=greeting -e QUARKUS_OPTS=-Xmx24M -Xms8m`
+`oc new-app quay.io/quarkus/ubi-quarkus-native-s2i:19.1.1~<your-git-repo>  --name=greeting -e QUARKUS_OPTS=-Xmx24M -Xms16M -Xmn24M`
 9. Have a look at the web console. Go to the menu -> Builds -> Builds. You should see a greeting-1 build. Have a look at the resources and the log. Have some coffee while this build runs. It takes quite a few minutes and as you might notice, it uses quite significant resources like CPU and Memory. (When you use minishift on your private laptop, you might need to increase cpu and memory limits to 4 cores and 4gb) When the build is done you will notice an image is being pushed to the image registry.
 10. Have a look at the project overview in the web console. When the build is done you should see a pod spinning up. (1 of 1 pods available)
 11. We can now test our greeting application. We probably first need to configure a "route" to get outside HTTP access to the greeting resource. Go to menu -> networking -> routes and click on "create route". Name your route "greeting and select the greeting service from the dropdown. Click on "Create". You can select the created route to display the url. Go to "<your-greeting-route>/hello/greeting/your-name". You should now be greeted by a native quarkus application.
@@ -39,17 +39,22 @@ In this lab we will set up our Todo application which will serve as an endpoint 
 2. Now try and run the application using `./mvnw compile quarkus:dev` It should run without errors
 3. Add the provided CORSFilter. This allows request from everywhere. (I have found the declarative Quarkus cors settings do not work really well)
 4. Now comes your assignment. Create the application by yourself. You need to do this by following these steps:
-   - Create a model file: Todo.java with 2 properties: "id" and "option".
-   - Create a service file: TodoService.java which will have add, remove, list and removeAll operations using the Todo model. Also, just save the data in a List<Todo> in the service for now. (Which is a dumb thing to do, I know)
-   - Modify the TodosResource to inject the TodoService and add rest operations using the following paths:
-     - GET / -> List all todos
-     - POST / -> Add the provided todo
-     - DELETE /{id} -> Remove the todo with the specified id.
-     - DELETE / -> remove all todos 
+   - Create a model file: Todo.java with 2 properties: "id" and "option". No magic here, its a POJO with the following requirements:
+     - Includes a no-arg constructor
+     - Includes a constructor for both id and option
+     - Has getters and setters for both id and option
+     - Has an overridden "public boolean equals(Object obj)" method as well as an overridden "public int hashCode()" method. (tip: use Objects.equals and Objects.hash)
+   - Create a service file: TodoService.java which will have add, remove, list and removeAll operations using the Todo model. Also, just save the data in a List<Todo> in the service for now. (Which is a dumb thing to do, I know) Use @ApplicationScoped on the class to make it injectable.
+   - Modify the TodosResource to inject the TodoService (tip: @Inject) and add rest operations using the following paths:
+     - GET / -> List all todos (tip: @GET)
+     - POST / -> Add the provided todo (tip: @POST)
+     - DELETE /{id} -> Remove the todo with the specified id. (tip: @DELETE @PATH("{id}") -> with @PathParam("id"")
+     - DELETE / -> remove all todos  (tip: @DELETE)
 5. You should be able to test your application by using postman or curl or whatever to fire of requests to your http://localhost:8080/todos/ endpoint
-6. When you have tested your application locally, then create a new github repo for your application and commit and push it to this repo.
-7. Use the skills learned in Lab 1 (from point 8) to create a native deployment for your todos api in openshift.
-8. Test and see if your application works in openshift by using postman. (Do not forget to create a route or you will not be able to connect)
+6. Remove the test files for now, this workshop is not about unit testing, however important it may be. :)
+7. When you have tested your application locally, then create a new github repo for your application and commit and push it to this repo.
+8. Use the skills learned in Lab 1 (from point 8) to create a native deployment for your todos api in openshift.
+9. Test and see if your application works in openshift by using postman. (Do not forget to create a route or you will not be able to connect)
 
 ## Lab 3: Deploying a sexy ui to make use of your api.
 
@@ -57,4 +62,66 @@ In this lab we will modify a pre-created react app to use our Todo API as a back
 
 1. Fork and clone the "https://github.com/mhjmaas/react-indecisionapp" on your machine.
 2. Modify the api endpoint property in the "src/components/IndecisionApp.js" file, and commit and push this code to your repo. (In real life we would use an environment variable here, to make the endpoint configurable without having to modify code)
-3. 
+3. Navigate to the openshift web console, and go to Catalog -> Developer Catalog. Select the "Tech Preview - Modern Web Applications" app template.
+4. Click on "Create Application", make sure your namespace is selected and give the name "indecision". Provide the git url of the application you forked. Also select: "Create route" and click on create.
+5. Your application is now being cloned, built and deployed. When the build and deployment are finished, navigate to the created route and test if your application works.
+   You can also find the route url by clicking on the "indecision" app in the project status overview. The pane on the right side displays the route at the bottom.
+6. Bask in the glory of never having to make a decision yourself again.
+
+
+## Lab 4: Connect to a mongodb instance
+
+In this lab we will no longer store information in memory, but use a mongodb database to persist the data.
+
+1. Return to the TodosApi we created in Lab 2. 
+2. Modify the TodoService.java file and inject the mongo client:
+   ```
+   @Inject
+   MongoClient mongoClient;
+   ```
+3. Add a getCollection() method:
+   ```
+   private MongoCollection getCollection() {
+       return mongoClient.getDatabase("todos").getCollection("todos");
+   }
+   ```
+4. Modify the list method as follows:
+   ```
+   public List<Todo> list() {
+       List<Todo> list = new ArrayList<>();
+       MongoCursor<Document> cursor = getCollection().find().iterator();
+
+       try {
+           while (cursor.hasNext()) {
+               Document document = cursor.next();
+               Todo todo = new Todo();
+               todo.setId(document.getInteger("id"));
+               todo.setOption(document.getString("option"));
+               list.add(todo);
+           }
+       } finally {
+           cursor.close();
+       }
+       return list;
+   }
+   ```
+ 5. Modify the add, remove and removeAll commands to use the getCollection() method and add or remove data from the database.
+    (tip: create a new Document and use the findOneAndDelete and deleteMany methods. Have a google. :)
+ 6. When done, add the following key-value pair to the application.properties file:
+    `quarkus.mongodb.connection-string = mongodb://localhost:27017`
+ 7. If you have docker installed and running, run the following command to start a local mongodb instance.
+    `docker run -ti --rm -p 27017:27017 mongo:4.0`
+ 8. Run the quarkus application locally and test using your favorite rest client.
+ 9. If everything works, commit and push your code to github.
+ 10. Now before we can rebuild our application in Openshift, we have to set up a mongodb instance on openshift. 
+     Do so by using the following command:
+     `oc new-app --image-stream=mongodb -e MONGODB_USER=todosuser -e MONGODB_PASSWORD=password -e MONGODB_DATABASE=todos -e MONGODB_ADMIN_PASSWORD=password`
+     You can have a look at the web console and see your mongodb instance getting pulled and started in your project
+ 11. To override our default mongodb connection string we need to go to Openshift web console, and navigate to "workloads -> Deployment Configs".
+     select our "todosapi" and go to environment. Add another key-value pair here which will be added to the environment variables for the running pods:
+     QUARKUS_MONGODB_CONNECTION_STRING with value: "mongodb://todosuser:password@mongodb:27017/todos". Click "save". This will trigger a redeployment,
+     but since we have not rebuild our image nothing of notice will happen.
+ 12. Rebuild our image based of the new sources by going to: "Builds -> Build Configs -> todosapi". Click on "Actions" in the top right corner and select "Start build".
+     You will be taken to the builds screen, and when it is finished it will automatically redeploy the image. When this is done, try the indecision app again. It should now read and save data from this mongodb instance
+     
+ This concludes the labs, if you have time left, you can perhaps try to add some unit tests to the todosapi or build in functionality for deciding a todo as well. It is up to you! I hope you enjoyed these labs. You are free to use these labs and share them, as long as you give credit to Terra10.
