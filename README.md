@@ -9,6 +9,7 @@ Before we begin we need to have a number of things installed, lets make sure you
 - JDK 8 or 11
 - Apache Maven 3.5.3+
 - A github account (easiest way for deploying our apps on openshift)
+- (Optional) GraalVM
 
 ## Lab 1: Introduction
 
@@ -55,6 +56,17 @@ In this lab we will set up our Todo application which will serve as an endpoint 
 7. When you have tested your application locally, then create a new github repo for your application and commit and push it to this repo.
 8. Use the skills learned in Lab 1 (from point 8) to create a native deployment for your todos api in openshift. Name it "todosapi"
 9. Test and see if your application works in openshift by using postman. (Do not forget to create a route or you will not be able to connect)
+
+## (Optional) Lab 2.1: 
+The application you just created in lab 2 can be run locally. You can simply run on your Java8 VM. Or you can create a native-image and start that!
+1. If you have not already done so, download the latest GraalVM. (https://github.com/oracle/graal/releases)
+2. Unzip in a folder of your choosing
+3. Set your JAVA_HOME to the graalVM location (export in my case JAVA_HOME=/opt/graalvm)
+4. Add graalVM to your path (in my case: export PATH=/opt/graalvm/bin:$PATH)
+5. Run the following command from the root dir of the project you have created: ./mvnw clean package -Pnative
+6. Wait for a long time, some magic is happening
+7. Run the application: (in my case) ./target/TodosApi-1.0-SNAPSHOT-runner
+8. Check the startup time! 
 
 ## Lab 3: Deploying a sexy ui to make use of your api.
 
