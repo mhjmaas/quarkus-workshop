@@ -48,9 +48,9 @@ In this lab we will set up our Todo application which will serve as an endpoint 
    - Create a service file: TodoService.java which will have add, remove, list and removeAll operations using the Todo model. Also, just save the data in a List<Todo> in the service for now. (Which is a dumb thing to do, I know) Use @ApplicationScoped on the class to make it injectable.
    - Modify the TodosResource to inject the TodoService (tip: @Inject) and add rest operations using the following paths:
      - GET / -> List all todos (tip: @GET)
-     - POST / -> Add the provided todo (tip: @POST)
-     - DELETE /{id} -> Remove the todo with the specified id. (tip: @DELETE @PATH("{id}") -> with @PathParam("id"")
-     - DELETE / -> remove all todos  (tip: @DELETE)
+     - POST / -> Add the provided todo (tip: @POST) -> Return the list of todos
+     - DELETE /{id} -> Remove the todo with the specified id. (tip: @DELETE @PATH("{id}") -> with @PathParam("id"") -> Return the list of todos
+     - DELETE / -> remove all todos  (tip: @DELETE) -> Return the list of todos
 5. You should be able to test your application by using postman or curl or whatever to fire of requests to your http://localhost:8080/todos/ endpoint
 6. Remove the test files for now, this workshop is not about unit testing, however important it may be. :)
 7. When you have tested your application locally, then create a new github repo for your application and commit and push it to this repo.
