@@ -63,10 +63,11 @@ The application you just created in lab 2 can be run locally. You can simply run
 2. Unzip in a folder of your choosing
 3. Set your JAVA_HOME to the graalVM location (export in my case JAVA_HOME=/opt/graalvm)
 4. Add graalVM to your path (in my case: export PATH=/opt/graalvm/bin:$PATH)
-5. Run the following command from the root dir of the project you have created: ./mvnw clean package -Pnative
-6. Wait for a long time, some magic is happening
-7. Run the application: (in my case) ./target/TodosApi-1.0-SNAPSHOT-runner
-8. Check the startup time! 
+5. Beware, On linux, you have to run `gu install native-image` as root (sudo su -) On Windows, you are on your own. ;)
+6. Run the following command from the root dir of the project you have created: ./mvnw clean package -Pnative
+7. Wait for a long time, some magic is happening
+8. Run the application: (in my case) ./target/TodosApi-1.0-SNAPSHOT-runner
+9. Check the startup time! 
 
 ## Lab 3: Deploying a sexy ui to make use of your api.
 
